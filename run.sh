@@ -1,18 +1,18 @@
 #!/bin/bash
 
-# 1. Очистка предыдущих запусков
+# Очистка старых данных
 echo "Очистка старых контейнеров и сетей..."
 docker compose -f proxy.yaml down --remove-orphans 2>/dev/null || true
 docker rm -f mysql-dev webapp 2>/dev/null || true
 
-# 2. Удаляем сеть backend, если существует
+# Удаляем старую сеть, если существует
 docker network rm backend 2>/dev/null || true
 
-# 3. Создаем новую сеть backend с подсетью 172.20.0.0/24
+# Создаем новую сеть
 echo "Создание сети backend..."
 docker network create --subnet=172.20.0.0/24 backend
 
-# 4. Запуск MySQL в Docker
+# Запуск MySQL с автоматической инициализацией
 echo "Запуск MySQL..."
 docker run -d \
   --name mysql-dev \
@@ -22,9 +22,14 @@ docker run -d \
   -e MYSQL_DATABASE=virtd \
   -e MYSQL_USER=app \
   -e MYSQL_PASSWORD=QwErTy1234 \
+  -v $(pwd)/mysql/initdb.d:/docker-entrypoint-initdb.d \
   mysql:8.0
 
-# 5. Сборка и запуск Python-приложения
+# Ждём, пока MySQL запустится
+echo "Ожидание запуска MySQL..."
+sleep 10
+
+# Сборка и запуск FastAPI приложения
 echo "Сборка и запуск FastAPI приложения..."
 docker build -f Dockerfile.python -t my-fastapi .
 
@@ -38,11 +43,11 @@ docker run -d \
   -e DB_NAME=virtd \
   my-fastapi
 
-# 6. Запуск reverse-proxy и ingress-proxy из proxy.yaml
-echo "Запуск прокси..."
+# Запуск прокси
+echo "Запуск reverse-proxy и ingress-proxy..."
 docker compose -f proxy.yaml up -d
 
-# 7. Вывод информации
+# Информация о запуске
 echo ""
 echo "✅ Сервисы запущены:"
 echo "- MySQL: 172.20.0.10:3306"
