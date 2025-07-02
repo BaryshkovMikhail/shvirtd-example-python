@@ -8,32 +8,38 @@ from typing import Optional
 
 
 # --- 1. Конфигурация ---
-# Считываем конфигурацию БД из переменных окружения
+# Считываем конфигурацию из переменных окружения
 db_host = os.environ.get('DB_HOST', '127.0.0.1')
 db_user = os.environ.get('DB_USER', 'app')
 db_password = os.environ.get('DB_PASSWORD', 'very_strong')
 db_name = os.environ.get('DB_NAME', 'example')
+table_name = os.environ.get('TABLE_NAME', 'requests')  # <-- новая настройка
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Код, который выполнится перед запуском приложения
     print("Приложение запускается...")
-    try:
-        with get_db_connection() as db:
-            cursor = db.cursor()
-            create_table_query = f"""
-            CREATE TABLE IF NOT EXISTS {db_name}.requests (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                request_date DATETIME,
-                request_ip VARCHAR(255)
-            )
-            """
-            cursor.execute(create_table_query)
-            db.commit()
-            print("Соединение с БД установлено и таблица 'requests' готова к работе.")
-            cursor.close()
-    except mysql.connector.Error as err:
-        print(f"Ошибка при подключении к БД или создании таблицы: {err}")
+
+    for i in range(10):  # попробуем подключиться до 10 раз
+        try:
+            with get_db_connection() as db:
+                cursor = db.cursor()
+                create_table_query = f"""
+                CREATE TABLE IF NOT EXISTS {db_name}.{table_name} (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    request_date DATETIME,
+                    request_ip VARCHAR(255)
+                )
+                """
+                cursor.execute(create_table_query)
+                db.commit()
+                print(f"Соединение с БД установлено и таблица '{table_name}' готова к работе.")
+                cursor.close()
+                break
+        except mysql.connector.Error as err:
+            print(f"Попытка {i+1}: Ошибка при подключении к БД или создании таблицы: {err}")
+            time.sleep(5)
     
     yield
     
@@ -72,7 +78,7 @@ def get_client_ip(x_real_ip: Optional[str] = Header(None)):
     return x_real_ip
 
 
-# --- 5. Основной эндпоинт ---
+# --- 4. Основной эндпоинт ---
 @app.get("/")
 def index(request: Request, ip_address: Optional[str] = Depends(get_client_ip)):
     final_ip = ip_address  # Только из X-Forwarded-For, без fallback
@@ -83,7 +89,7 @@ def index(request: Request, ip_address: Optional[str] = Depends(get_client_ip)):
     try:
         with get_db_connection() as db:
             cursor = db.cursor()
-            query = "INSERT INTO requests (request_date, request_ip) VALUES (%s, %s)"
+            query = f"INSERT INTO {table_name} (request_date, request_ip) VALUES (%s, %s)"
             values = (current_time, final_ip)
             cursor.execute(query, values)
             db.commit()
@@ -120,7 +126,7 @@ def get_requests():
     try:
         with get_db_connection() as db:
             cursor = db.cursor()
-            query = "SELECT id, request_date, request_ip FROM requests ORDER BY id DESC LIMIT 50"
+            query = f"SELECT id, request_date, request_ip FROM {table_name} ORDER BY id DESC LIMIT 50"
             cursor.execute(query)
             records = cursor.fetchall()
             cursor.close()
@@ -140,11 +146,3 @@ def get_requests():
             }
     except mysql.connector.Error as err:
         return {"error": f"Ошибка при чтении из базы данных: {err}"}
-
-
-# --- 7. Запуск приложения ---
-# Для запуска этого файла используется ASGI-сервер, например, uvicorn.
-# Команда: uvicorn main:app --reload
-if __name__ == '__main__':
-    import uvicorn
-    uvicorn.run(app, host='0.0.0.0', port=5000)

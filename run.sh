@@ -12,7 +12,7 @@ docker network rm backend 2>/dev/null || true
 echo "Создание сети backend..."
 docker network create --subnet=172.20.0.0/24 backend
 
-# Запуск MySQL с автоматической инициализацией
+# Запуск MySQL
 echo "Запуск MySQL..."
 docker run -d \
   --name mysql-dev \
@@ -22,7 +22,6 @@ docker run -d \
   -e MYSQL_DATABASE=virtd \
   -e MYSQL_USER=app \
   -e MYSQL_PASSWORD=QwErTy1234 \
-  -v $(pwd)/mysql/initdb.d:/docker-entrypoint-initdb.d \
   mysql:8.0
 
 # Ждём, пока MySQL запустится
@@ -41,6 +40,7 @@ docker run -d \
   -e DB_USER=app \
   -e DB_PASSWORD=QwErTy1234 \
   -e DB_NAME=virtd \
+  -e TABLE_NAME=requests \
   my-fastapi
 
 # Запуск прокси
