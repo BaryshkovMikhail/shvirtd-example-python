@@ -19,9 +19,12 @@ services:
     - ./nginx/ingress/default.conf:/etc/nginx/conf.d/default.conf:rw
     - ./nginx/ingress/nginx.conf:/etc/nginx/nginx.conf:rw
 
+##networks:
+##  backend:
+##    driver: bridge
+##    ipam:
+##     config:
+##       - subnet: 172.20.0.0/24
 networks:
   backend:
-    driver: bridge
-    ipam:
-     config:
-       - subnet: 172.20.0.0/24
+    external: true  # используем уже созданную сеть
