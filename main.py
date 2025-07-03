@@ -75,14 +75,16 @@ def get_db_connection():
 
 
 # --- 3. Зависимость для получения IP ---
-def get_client_ip(x_real_ip: Optional[str] = Header(None)):
-    return x_real_ip
+def get_client_ip(x_forwarded_for: Optional[str] = Header(None)):
+    if x_forwarded_for:
+        return x_forwarded_for.split(',')[0].strip()
+    return None
 
 
 # --- 4. Основной эндпоинт ---
 @app.get("/")
 def index(request: Request, ip_address: Optional[str] = Depends(get_client_ip)):
-    final_ip = ip_address  # Только из X-Forwarded-For, без fallback
+    final_ip = ip_address  # без fallback
 
     now = datetime.now()
     current_time = now.strftime("%Y-%m-%d %H:%M:%S")
@@ -106,6 +108,15 @@ def index(request: Request, ip_address: Optional[str] = Depends(get_client_ip)):
 
     return f'TIME: {current_time}, IP: {ip_display}'
 
+@app.get("/debug")
+def debug_headers(request: Request):
+    return {
+        "headers": dict(request.headers),
+        "client_host": request.client.host if request.client else None,
+        "x-forwarded-for": request.headers.get('x-forwarded-for'),
+        "real-ip": request.headers.get('x-real-ip'),
+        "forwarded": request.headers.get('forwarded')
+    }
 
 # --- 5. Отладочный эндпоинт ---
 @app.get("/debug")
