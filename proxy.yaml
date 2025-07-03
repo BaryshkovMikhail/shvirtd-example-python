@@ -25,6 +25,6 @@ services:
 ##    ipam:
 ##     config:
 ##      - subnet: 172.20.0.0/24
-networks:
- backend:
-    external: true  # используем уже созданную сеть
+##networks:
+## backend:
+##    external: true  # используем уже созданную сеть

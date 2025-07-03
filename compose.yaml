@@ -1,0 +1,55 @@
+# compose.yaml
+
+name: shvirtd-example-python
+
+include:
+  - proxy.yaml
+
+services:
+  db:
+    image: mysql:8
+    container_name: mysql-dev
+    networks:
+      backend:
+        ipv4_address: 172.20.0.10
+    ports:
+      - "127.0.0.1:3306:3306"
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: YtReWq4321
+      MYSQL_DATABASE: virtd
+      MYSQL_USER: app
+      MYSQL_PASSWORD: QwErTy1234
+    env_file:
+      - .env
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.python
+    container_name: webapp
+    networks:
+      backend:
+        ipv4_address: 172.20.0.5
+    restart: always
+    ports:
+      - "127.0.0.1:5000:5000"
+    depends_on:
+      - db
+    environment:
+      DB_HOST: 172.20.0.10
+      DB_USER: app
+      DB_PASSWORD: QwErTy1234
+      DB_NAME: virtd
+      TABLE_NAME: requests
+    env_file:
+      - .env
+
+networks:
+  backend:
+    name: backend
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.20.0.0/24
