@@ -20,6 +20,14 @@
 
 запуск произодиться скриптом run.sh
 
+Перед этим в файле proxy.yaml  надо раскоментировать 
+
+```
+##networks:
+## backend:
+##    external: true  # используем уже созданную сеть
+```
+
 ## Задача 2 (*)
 1. Создайте в yandex cloud container registry с именем "test" с помощью "yc tool" . [Инструкция](https://cloud.yandex.ru/ru/docs/container-registry/quickstart/?from=int-console-help)
 2. Настройте аутентификацию вашего локального docker в yandex container registry.
