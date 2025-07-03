@@ -2,13 +2,11 @@
 
 # Очистка старых данных
 echo "Очистка старых контейнеров и сетей..."
-docker compose -f proxy.yaml down --remove-orphans 2>/dev/null || true
-docker rm -f mysql-dev webapp 2>/dev/null || true
+docker compose -f proxy.yaml down --remove-orphans || true
+docker rm -f mysql-dev webapp || true
+docker network rm backend || true
 
-# Удаляем старую сеть, если существует
-docker network rm backend 2>/dev/null || true
-
-# Создаем новую сеть
+# Создаем сеть с нужной подсетью
 echo "Создание сети backend..."
 docker network create --subnet=172.20.0.0/24 backend
 
@@ -28,14 +26,16 @@ docker run -d \
 echo "Ожидание запуска MySQL..."
 sleep 10
 
-# Сборка и запуск FastAPI приложения
-echo "Сборка и запуск FastAPI приложения..."
+# Сборка FastAPI приложения
+echo "Сборка FastAPI приложения..."
 docker build -f Dockerfile.python -t my-fastapi .
 
+# Запуск FastAPI
 docker run -d \
   --name webapp \
   --network backend \
   --ip 172.20.0.5 \
+  -p 127.0.0.1:5000:5000 \
   -e DB_HOST=172.20.0.10 \
   -e DB_USER=app \
   -e DB_PASSWORD=QwErTy1234 \
@@ -43,7 +43,9 @@ docker run -d \
   -e TABLE_NAME=requests \
   my-fastapi
 
-# Запуск прокси
+# Добавьте импорт time в main.py, чтобы не было NameError ↑
+
+# Теперь запуск прокси
 echo "Запуск reverse-proxy и ingress-proxy..."
 docker compose -f proxy.yaml up -d
 

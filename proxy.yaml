@@ -24,7 +24,7 @@ services:
 ##    driver: bridge
 ##    ipam:
 ##     config:
-##       - subnet: 172.20.0.0/24
+##      - subnet: 172.20.0.0/24
 networks:
-  backend:
+ backend:
     external: true  # используем уже созданную сеть
